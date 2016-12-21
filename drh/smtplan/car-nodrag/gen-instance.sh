@@ -139,18 +139,21 @@ stop() {
         printf "(component stop_automaton;
 label did_stop;
 label do_stop;
+label lock;
+label unlock;
 (mode on_stop_automaton;
 invt:
 flow:
 jump:
-(did_stop): true ==> @off_stop_automaton true;
+(did_stop, unlock): true ==> @off_stop_automaton true;
 )
 (mode off_stop_automaton;
 invt:
 flow:
 jump:
-(do_stop): (and (v = 0) (d >= 30)) ==> @on_stop_automaton true;
-
+(do_stop, lock): (and (v = 0) (d >= 30)) ==> @on_stop_automaton true;
+(lock) : true ==> @off_stop_automaton true;
+(unlock) : true ==> @off_stop_automaton true;
 )
 )\n"
 }
@@ -160,17 +163,21 @@ accelerate() {
         printf "(component accelerate_automaton;
 label did_accel;
 label do_accel;
+label lock;
+label unlock;
 (mode on_accelerate_automaton;
 invt:
 flow:
 jump:
-(did_accel): true ==> @off_accelerate_automaton true;
+(did_accel, unlock): true ==> @off_accelerate_automaton true;
 )
 (mode off_accelerate_automaton;
 invt:
 flow:
 jump:
-(do_accel): true ==> @on_accelerate_automaton true;
+(do_accel, lock): true ==> @on_accelerate_automaton true;
+(lock) : true ==> @off_accelerate_automaton true;
+(unlock) : true ==> @off_accelerate_automaton true;
 
 )
 )\n"
@@ -180,17 +187,21 @@ decelerate() {
          printf "(component decelerate_automaton;
 label did_decel;
 label do_decel;
+label lock;
+label unlock;
 (mode on_decelerate_automaton;
 invt:
 flow:
 jump:
-(did_decel): true ==> @off_decelerate_automaton true;
+(did_decel, unlock): true ==> @off_decelerate_automaton true;
 )
 (mode off_decelerate_automaton;
 invt:
 flow:
 jump:
-(do_decel): true ==> @on_decelerate_automaton true;
+(do_decel, lock): true ==> @on_decelerate_automaton true;
+(lock) : true ==> @off_decelerate_automaton true;
+(unlock) : true ==> @off_decelerate_automaton true;
 )
 )\n"
 }
@@ -233,6 +244,8 @@ label do_stop;
 label did_stop;
 label do_explode;
 label did_explode;
+label lock;
+label unlock;
 
 (mode lock_enabled;
 invt:
@@ -240,20 +253,20 @@ invt:
 flow:
 d/dt[lock_timer] = 1;
 jump:
-(did_accel): (lock_timer >= 0) ==> @lock_released (true);
-(did_decel): (lock_timer >= 0) ==> @lock_released (true);
-(did_stop): (lock_timer >= 0) ==> @lock_released (true);
-(did_explode): (lock_timer >= 0) ==> @lock_released (true);
+(did_accel, unlock): (lock_timer >= 0) ==> @lock_released (true);
+(did_decel, unlock): (lock_timer >= 0) ==> @lock_released (true);
+(did_stop, unlock): (lock_timer >= 0) ==> @lock_released (true);
+(did_explode, unlock): (lock_timer >= 0) ==> @lock_released (true);
 )
 (mode lock_released;
 invt:
 flow:
 d/dt[lock_timer] = 0;
 jump:
-(do_accel): (true) ==> @lock_enabled (lock_timer' = 0);
-(do_decel): (true) ==> @lock_enabled (lock_timer' = 0);
-(do_stop): (true) ==> @lock_enabled (lock_timer' = 0);
-(do_explode): (true) ==> @lock_enabled (lock_timer' = 0);
+(do_accel, lock): (true) ==> @lock_enabled (lock_timer' = 0);
+(do_decel, lock): (true) ==> @lock_enabled (lock_timer' = 0);
+(do_stop, lock): (true) ==> @lock_enabled (lock_timer' = 0);
+(do_explode, lock): (true) ==> @lock_enabled (lock_timer' = 0);
 )
 )\n"
 }
@@ -281,6 +294,7 @@ label do_stop;
     printf "(component engineExplode;
 label do_explode;
 label done_explode;
+label do_stop;
 
 (mode nr_na_nv;
 invt: (a < 1); (v < 100);
@@ -392,7 +406,7 @@ components() {
 
 analyze() {
     printf "analyze: 
-lock_automaton0 = lock_automaton[[lock_timer/time_lock], @lock_released (lock_timer=0)];
+engineExplode0 = engineExplode[[], @r_na_nv true];
 moving_automaton0 = moving_automaton[[], @on_moving_automaton true];\n"
 #	for((i = 1; i <= $DIMENSION; i++)); do {
 	printf "accelerate_automaton0 = accelerate_automaton[[], @off_accelerate_automaton true];
@@ -406,8 +420,8 @@ distance0 = distance[[], @d_v (d = 0)];
 running_time0 = running_time[[], @on (running_time = 0)];
 up_limit0 = up_limit[[], @up_limit_zero (up_limit = $DIMENSION)];
 down_limit0 = down_limit[[], @down_limit_zero (down_limit = -$DIMENSION)];
-engineExplode0 = engineExplode[[], @r_na_nv true];
 blown0 = blown[[], @blown_false true];
+lock_automaton0 = lock_automaton[[lock_timer/time_lock], @lock_released (lock_timer=0)];
 (
 acceleration0 ||
 velocity0 ||
