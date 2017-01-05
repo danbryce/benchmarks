@@ -3,11 +3,63 @@
 DIMENSION=$1
 
 header(){
-    printf "#define capacity_gen 1000\n\
-#define eps 0.001\n\
-[0, 10000] time;\n"
+    printf "[0, 10000] time;\n"
     }
 
+initialize () {
+    printf "(component initialize;
+label initialize;
+label initialize_generator_ran_false;
+label initialize_available_t1_true;
+
+(mode initialize_false;
+ invt:
+ flow:
+ jump:	
+   (initialize,  
+    initialize_generator_ran_false, initialize_available_t1_true) : true ==> @initialize_true true;
+)
+(mode initialize_true;
+ invt:
+ flow:
+ jump:
+)
+)
+"
+}
+
+refueling_pred(){
+    TANK=$1
+    GENS=$2
+    printf "(component available_t$TANK_pred;
+label initialize;
+label initialize_available_t$TANK_true;"
+    for((i=0; i<$GENS; i++)); do {
+	printf "label do_start_refuel_g$i_t$TANK;"
+    }; done
+    printf "(mode initialize;
+ invt: (time = 0);
+ flow: 
+ jump:
+  (initialize, initialize_available_t$TANK_true) : true ==> @available_true true;
+)
+
+(mode available_true;
+ invt:
+ flow:
+ jump:"
+    for((i=0; i<$GENS; i++)); do {
+	printf "(do_start_refuel_g$i_t$TANK) : true ==> @available_false true;"
+    }; done 
+printf ")
+
+(mode available_false;
+ invt:
+ flow:
+ jump:
+)
+)"
+    }
 
 component_fuellevel() {
     printf "(component fuellevel_gen;\n\

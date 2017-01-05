@@ -20,9 +20,13 @@ component_fuellevel() {
    printf "label do_stop_gen;\n\
 	label do_start_gen;\n"
 
+   RATE="0"
+   for((i = 0; i < $DIMENSION; i++)); do {
+      RATE="$RATE + (0.1 * (time_rt$i * time_rt$i))"
+   };done
+   
    #no generator running, but refilling
    for((i = 0; i <= $DIMENSION; i++)); do {
-       RATE=`expr 2 \* $i`
        UP_ONE=`expr $i + 1`
        DOWN_ONE=`expr $i - 1`
        printf "(mode fuellevel_nogen_t$i;\n\
@@ -46,7 +50,6 @@ component_fuellevel() {
 
    #generator running, but refilling
    for((i = 0; i <= $DIMENSION; i++)); do {
-       RATE=`expr 2 \* $i`
        UP_ONE=`expr $i + 1`
        DOWN_ONE=`expr $i - 1`
        printf "(mode fuellevel_gen_t$i;\n\
@@ -249,7 +252,7 @@ component_lock() {
         label unlock;
 
 	(mode locked;
-	invt: (lock_time = 0); (time = 0);
+	invt: (lock_time <= 0); (time = 0);
 	flow: d/dt[lock_time] = 1;
 	jump:\n "
    for((i = 0; i < $DIMENSION; i++)); do {
